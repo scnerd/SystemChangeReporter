@@ -59,8 +59,23 @@ namespace SystemChangeReporter
 
             txtPollTime.Text = RegistryPollTime.ToString();
             tmrPollRegistry.Interval = RegistryPollTime;
+            //Initial Poll
+            //Note that this REQUIRES admin priviledges. If this somehow got started without them, registry polling will fail
+            try
+            {
+                PollRegistry();
+            }
+            catch (System.Security.SecurityException)
+            {
+                MessageBox.Show("Must be launched as administrator for registry polling to complete successfully.\r\nDefaulting to just disk monitoring.");
+                chkRegistryMonitor.Checked = false;
+                chkRegistryMonitor.Enabled = false;
+                txtPollTime.Enabled = false;
+            }
 
             IsRunning = true;
+
+            //TODO: tmrPollRegistry.Start();
         }
 
         #endregion
@@ -93,7 +108,7 @@ namespace SystemChangeReporter
         private void txtPollTime_TextChanged(object sender, EventArgs e)
         {
             int NewTime = RegistryPollTime;
-            if(int.TryParse(txtPollTime.Text, out NewTime))
+            if (int.TryParse(txtPollTime.Text, out NewTime))
                 RegistryPollTime = NewTime;
             txtPollTime.Text = RegistryPollTime.ToString();
             tmrPollRegistry.Interval = RegistryPollTime;
@@ -101,10 +116,13 @@ namespace SystemChangeReporter
 
         private void tmrPollRegistry_Tick(object sender, EventArgs e)
         {
+            tmrPollRegistry.Stop();
             if (!(IsRunning && chkRegistryMonitor.Checked))
                 return;
 
+            PollRegistry();
 
+            tmrPollRegistry.Start();
         }
 
         #endregion
@@ -188,19 +206,26 @@ namespace SystemChangeReporter
 
         private void PollRegistry()
         {
+            RegistryLog("Beginning registry update");
             List<string> CheckedStrs = new List<string>(PrevRegistry.Count);
+
             foreach (RegistryKey Root in RegistryBases)
                 UpdateRegKey(Root, ref CheckedStrs);
+
+
             var Deleted =
                 from key in PrevRegistry.Keys
                 where !CheckedStrs.Contains(key)
                 select key;
             foreach (var DeletedKey in Deleted)
                 ChangeRegistry(DeletedKey, ChangeType.Delete);
+
+            RegistryLog("Registry update complete");
         }
 
         private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs)
         {
+            RegistryLog(RootKey.Name);
             CheckedStrs.Add(RootKey.Name);
 
             if (!PrevRegistry.ContainsKey(RootKey.Name))
@@ -228,7 +253,7 @@ namespace SystemChangeReporter
 
             foreach (var SubKeyName in RootKey.GetSubKeyNames())
             {
-                UpdateRegKey(RootKey.OpenSubKey(SubKeyName), ref CheckedStrs);
+                    UpdateRegKey(RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.ReadKey), ref CheckedStrs);
             }
 
             RootKey.Close();
