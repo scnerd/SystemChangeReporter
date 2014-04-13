@@ -48,6 +48,7 @@
             this.chkRegistryMonitor = new System.Windows.Forms.ToolStripMenuItem();
             this.registryPollTimeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.txtPollTime = new System.Windows.Forms.ToolStripTextBox();
+            this.manuallyPollToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tmrPollRegistry = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.fsWatcher)).BeginInit();
             this.tblLayout.SuspendLayout();
@@ -153,7 +154,8 @@
             this.cmbDrive,
             this.btnSave,
             this.filterToolStripMenuItem,
-            this.stopToolStripMenuItem});
+            this.stopToolStripMenuItem,
+            this.manuallyPollToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(696, 27);
@@ -236,6 +238,13 @@
             this.txtPollTime.Size = new System.Drawing.Size(100, 23);
             this.txtPollTime.TextChanged += new System.EventHandler(this.txtPollTime_TextChanged);
             // 
+            // manuallyPollToolStripMenuItem
+            // 
+            this.manuallyPollToolStripMenuItem.Name = "manuallyPollToolStripMenuItem";
+            this.manuallyPollToolStripMenuItem.Size = new System.Drawing.Size(91, 23);
+            this.manuallyPollToolStripMenuItem.Text = "Manually Poll";
+            this.manuallyPollToolStripMenuItem.Click += new System.EventHandler(this.btnPollRegistry_Click);
+            // 
             // tmrPollRegistry
             // 
             this.tmrPollRegistry.Tick += new System.EventHandler(this.tmrPollRegistry_Tick);
@@ -283,6 +292,7 @@
         private System.Windows.Forms.ToolStripMenuItem registryPollTimeToolStripMenuItem;
         private System.Windows.Forms.ToolStripTextBox txtPollTime;
         private System.Windows.Forms.Timer tmrPollRegistry;
+        private System.Windows.Forms.ToolStripMenuItem manuallyPollToolStripMenuItem;
     }
 }
 

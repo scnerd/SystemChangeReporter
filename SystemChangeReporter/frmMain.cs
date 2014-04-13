@@ -20,6 +20,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using System.Security.Principal;
+using System.Security.AccessControl;
 
 namespace SystemChangeReporter
 {
@@ -35,11 +39,15 @@ namespace SystemChangeReporter
             Rename,
             Unknown
         }
-        private RegistryKey[] RegistryBases = { /*Registry.ClassesRoot, */Registry.CurrentConfig, Registry.CurrentUser, Registry.LocalMachine, Registry.PerformanceData, Registry.Users };
+        private RegistryKey[] RegistryBases = { /*Registry.ClassesRoot, */Registry.CurrentUser, Registry.CurrentConfig, Registry.LocalMachine, Registry.PerformanceData, Registry.Users };
 
         Dictionary<string, Dictionary<string, object>> PrevRegistry = new Dictionary<string, Dictionary<string, object>>();
         int RegistryPollTime = 5000;
         bool IsRunning = false;
+
+        //string CurRegKeyInPoll = "";
+        List<string> DriveFilters = new List<string>();
+        List<string> RegFilters = new List<string>();
 
         #region SETUP
 
@@ -61,21 +69,16 @@ namespace SystemChangeReporter
             tmrPollRegistry.Interval = RegistryPollTime;
             //Initial Poll
             //Note that this REQUIRES admin priviledges. If this somehow got started without them, registry polling will fail
-            try
-            {
-                PollRegistry();
-            }
-            catch (System.Security.SecurityException)
-            {
-                MessageBox.Show("Must be launched as administrator for registry polling to complete successfully.\r\nDefaulting to just disk monitoring.");
-                chkRegistryMonitor.Checked = false;
-                chkRegistryMonitor.Enabled = false;
-                txtPollTime.Enabled = false;
-            }
+            PollRegistry(true);
 
             IsRunning = true;
 
             //TODO: tmrPollRegistry.Start();
+        }
+
+        private void btnPollRegistry_Click(object sender, EventArgs e)
+        {
+            PollRegistry();
         }
 
         #endregion
@@ -129,6 +132,11 @@ namespace SystemChangeReporter
 
         #region HELPERS
 
+        private void LoadFilters()
+        {
+
+        }
+
         private ChangeType ConvertFSChangeToChange(System.IO.WatcherChangeTypes From)
         {
             switch (From)
@@ -144,6 +152,14 @@ namespace SystemChangeReporter
                 default:
                     return ChangeType.Unknown;
             }
+        }
+
+        public static Regex WildcardToRegex(string pattern)
+        {
+            //http://www.codeproject.com/Articles/11556/Converting-Wildcards-to-Regexes
+            return new Regex("^" + Regex.Escape(pattern).
+                               Replace(@"\*", ".*").
+                               Replace(@"\?", ".") + "$", RegexOptions.Compiled);
         }
 
         //private void ResetRegistryMonitors()
@@ -201,17 +217,37 @@ namespace SystemChangeReporter
 
         private void FileLog(string Text)
         {
-            txtFileLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL);
+            if (IsRunning && chkDriveMonitor.Checked)
+                txtFileLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL);
         }
 
-        private void PollRegistry()
+        private void PollRegistry(bool SecurityCheck = false)
         {
             RegistryLog("Beginning registry update");
             List<string> CheckedStrs = new List<string>(PrevRegistry.Count);
+            List<Regex> RegFiltersCompiled = RegFilters.Select(s => WildcardToRegex(s)).ToList();
 
-            foreach (RegistryKey Root in RegistryBases)
-                UpdateRegKey(Root, ref CheckedStrs);
-
+            try
+            {
+                Parallel.ForEach(RegistryBases, (Root) =>
+                //                foreach (var Root in RegistryBases)
+                {
+                    UpdateRegKey(Root, ref CheckedStrs, ref RegFiltersCompiled, SecurityCheck);
+                }
+                );
+            }
+            catch (System.Security.SecurityException)
+            {
+                tmrPollRegistry.Stop();
+                MessageBox.Show("Permission unexpectedly denied for some key, polling has been suspended. Please add a filter for this key, or inspect its permissions.", "Unexpected Key Permission Denied", MessageBoxButtons.OK);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Application.Exit();
+                Application.ExitThread();
+                return;
+            }
 
             var Deleted =
                 from key in PrevRegistry.Keys
@@ -223,15 +259,19 @@ namespace SystemChangeReporter
             RegistryLog("Registry update complete");
         }
 
-        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs)
+        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, ref List<Regex> Filters, bool SecurityCheck)
         {
+            if (Filters.Any(filt => filt.IsMatch(RootKey.Name)))
+                return;
+
             RegistryLog(RootKey.Name);
             CheckedStrs.Add(RootKey.Name);
 
             if (!PrevRegistry.ContainsKey(RootKey.Name))
             {
                 ChangeRegistry(RootKey, ChangeType.Create);
-                PrevRegistry.Add(RootKey.Name, new Dictionary<string, object>());
+                lock (PrevRegistry)
+                    PrevRegistry.Add(RootKey.Name, new Dictionary<string, object>());
             }
 
             foreach (var key in RootKey.GetValueNames())
@@ -244,7 +284,7 @@ namespace SystemChangeReporter
                     ChangeRegistry(RootKey, ChangeType.Create, CurrentKVP);
                     PrevRegistry[RootKey.Name].Add(key, CurrentValue);
                 }
-                else if (StoredKVP.Value != CurrentValue)
+                else if (!StoredKVP.Value.Equals(CurrentValue))
                 {
                     ChangeRegistry(RootKey, ChangeType.Change, new KeyValuePair<string, object>(key, CurrentValue));
                     PrevRegistry[RootKey.Name][key] = CurrentValue;
@@ -253,7 +293,47 @@ namespace SystemChangeReporter
 
             foreach (var SubKeyName in RootKey.GetSubKeyNames())
             {
-                    UpdateRegKey(RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.ReadKey), ref CheckedStrs);
+                //var AccessRights = RootKey.GetAccessControl().GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
+                //System.Security.AccessControl.RegistryRights.ReadPermissions ??
+                //if (SecurityCheck)
+                //    try
+                //    {
+                //        var SubKey = RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.ReadKey);
+                //        if (SubKey == null)
+                //            RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
+                //        else
+                //            UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
+                //    }
+                //    catch (System.Security.SecurityException)
+                //    {
+                //        MessageBox.Show("Permission denied to key '" + RootKey.Name + "', automatically added temporary filter for this key and subkeys");
+                //        RegistryLog("Permission denied to key '" + RootKey.Name + "', automatically added temporary filter for this key and subkeys");
+                //        RegFilters.Add(RootKey.Name + "*");
+                //    }
+                //else
+                //{
+                var AccessRules = RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadPermissions).GetAccessControl().GetAccessRules(true, true, typeof(NTAccount));
+                bool HadPermission = false;
+                foreach (AuthorizationRule Rule in AccessRules)
+                {
+                    if (((SecurityIdentifier)Rule.IdentityReference.Translate(typeof(SecurityIdentifier))).Equals(WindowsIdentity.GetCurrent().User))
+                    {
+                        var SubKey = RootKey.OpenSubKey(SubKeyName, false);
+                        if (SubKey == null)
+                            RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
+                        else
+                            UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
+                        HadPermission = true;
+                        break;
+                    }
+                }
+                if (!HadPermission)
+                {
+                    //MessageBox.Show("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys");
+                    RegistryLog("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys");
+                    RegFilters.Add(RootKey.Name + "\\" + SubKeyName + "*");
+                }
+                //}
             }
 
             RootKey.Close();
@@ -284,7 +364,8 @@ namespace SystemChangeReporter
 
         private void RegistryLog(string Text)
         {
-            txtRegLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL);
+            if (IsRunning && chkRegistryMonitor.Checked)
+                txtRegLog.BeginInvoke((Action)(() => txtRegLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL)));
         }
 
         #endregion
