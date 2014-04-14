@@ -40,13 +40,13 @@
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.cmbDrive = new System.Windows.Forms.ToolStripComboBox();
             this.filterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editFiltersFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageDriveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nothinMuchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageRegistryFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nothinMuchToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editFiltersFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chkDriveMonitor = new System.Windows.Forms.ToolStripMenuItem();
             this.chkRegistryMonitor = new System.Windows.Forms.ToolStripMenuItem();
@@ -184,12 +184,19 @@
             this.filterToolStripMenuItem.Size = new System.Drawing.Size(45, 23);
             this.filterToolStripMenuItem.Text = "Filter";
             // 
+            // editFiltersFileToolStripMenuItem
+            // 
+            this.editFiltersFileToolStripMenuItem.Name = "editFiltersFileToolStripMenuItem";
+            this.editFiltersFileToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.editFiltersFileToolStripMenuItem.Text = "Edit Filters File";
+            this.editFiltersFileToolStripMenuItem.Click += new System.EventHandler(this.editFiltersFileToolStripMenuItem_Click);
+            // 
             // manageDriveFiltersToolStripMenuItem
             // 
             this.manageDriveFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem});
             this.manageDriveFiltersToolStripMenuItem.Name = "manageDriveFiltersToolStripMenuItem";
-            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
             this.manageDriveFiltersToolStripMenuItem.Text = "Driver Filters";
             this.manageDriveFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageDriveFiltersToolStripMenuItem_DropDownOpening);
             // 
@@ -204,7 +211,7 @@
             this.manageRegistryFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem1});
             this.manageRegistryFiltersToolStripMenuItem.Name = "manageRegistryFiltersToolStripMenuItem";
-            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
             this.manageRegistryFiltersToolStripMenuItem.Text = "Registry Filters";
             this.manageRegistryFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageRegistryFiltersToolStripMenuItem_DropDownOpening);
             // 
@@ -217,23 +224,16 @@
             // saveFiltersToolStripMenuItem
             // 
             this.saveFiltersToolStripMenuItem.Name = "saveFiltersToolStripMenuItem";
-            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
             this.saveFiltersToolStripMenuItem.Text = "Save Filters";
             this.saveFiltersToolStripMenuItem.Click += new System.EventHandler(this.saveFiltersToolStripMenuItem_Click);
             // 
             // loadFiltersToolStripMenuItem
             // 
             this.loadFiltersToolStripMenuItem.Name = "loadFiltersToolStripMenuItem";
-            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
             this.loadFiltersToolStripMenuItem.Text = "Load Filters";
             this.loadFiltersToolStripMenuItem.Click += new System.EventHandler(this.loadFiltersToolStripMenuItem_Click);
-            // 
-            // editFiltersFileToolStripMenuItem
-            // 
-            this.editFiltersFileToolStripMenuItem.Name = "editFiltersFileToolStripMenuItem";
-            this.editFiltersFileToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.editFiltersFileToolStripMenuItem.Text = "Edit Filters File";
-            this.editFiltersFileToolStripMenuItem.Click += new System.EventHandler(this.editFiltersFileToolStripMenuItem_Click);
             // 
             // stopToolStripMenuItem
             // 
@@ -302,7 +302,7 @@
             this.Controls.Add(this.menuStrip);
             this.MainMenuStrip = this.menuStrip;
             this.Name = "frmMain";
-            this.Text = "Form1";
+            this.Text = "System Change Reporter";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.fsWatcher)).EndInit();
             this.tblLayout.ResumeLayout(false);
