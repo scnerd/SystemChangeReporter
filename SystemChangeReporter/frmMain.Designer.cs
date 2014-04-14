@@ -46,6 +46,7 @@
             this.nothinMuchToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editFiltersFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chkDriveMonitor = new System.Windows.Forms.ToolStripMenuItem();
             this.chkRegistryMonitor = new System.Windows.Forms.ToolStripMenuItem();
@@ -74,7 +75,7 @@
             this.treFiles.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treFiles.Location = new System.Drawing.Point(3, 3);
             this.treFiles.Name = "treFiles";
-            this.treFiles.Size = new System.Drawing.Size(342, 252);
+            this.treFiles.Size = new System.Drawing.Size(342, 212);
             this.treFiles.TabIndex = 0;
             // 
             // tblLayout
@@ -92,8 +93,8 @@
             this.tblLayout.Location = new System.Drawing.Point(0, 27);
             this.tblLayout.Name = "tblLayout";
             this.tblLayout.RowCount = 3;
-            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 78.89908F));
-            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 21.10092F));
+            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 66.66666F));
+            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34F));
             this.tblLayout.Size = new System.Drawing.Size(696, 362);
             this.tblLayout.TabIndex = 1;
@@ -101,12 +102,12 @@
             // txtRegLog
             // 
             this.txtRegLog.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtRegLog.Location = new System.Drawing.Point(351, 261);
+            this.txtRegLog.Location = new System.Drawing.Point(351, 221);
             this.txtRegLog.Multiline = true;
             this.txtRegLog.Name = "txtRegLog";
             this.txtRegLog.ReadOnly = true;
             this.txtRegLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtRegLog.Size = new System.Drawing.Size(342, 63);
+            this.txtRegLog.Size = new System.Drawing.Size(342, 103);
             this.txtRegLog.TabIndex = 5;
             // 
             // treReg
@@ -114,7 +115,7 @@
             this.treReg.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treReg.Location = new System.Drawing.Point(351, 3);
             this.treReg.Name = "treReg";
-            this.treReg.Size = new System.Drawing.Size(342, 252);
+            this.treReg.Size = new System.Drawing.Size(342, 212);
             this.treReg.TabIndex = 3;
             // 
             // btnStart
@@ -142,12 +143,12 @@
             // txtFileLog
             // 
             this.txtFileLog.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtFileLog.Location = new System.Drawing.Point(3, 261);
+            this.txtFileLog.Location = new System.Drawing.Point(3, 221);
             this.txtFileLog.Multiline = true;
             this.txtFileLog.Name = "txtFileLog";
             this.txtFileLog.ReadOnly = true;
             this.txtFileLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtFileLog.Size = new System.Drawing.Size(342, 63);
+            this.txtFileLog.Size = new System.Drawing.Size(342, 103);
             this.txtFileLog.TabIndex = 4;
             // 
             // menuStrip
@@ -174,6 +175,7 @@
             // filterToolStripMenuItem
             // 
             this.filterToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.editFiltersFileToolStripMenuItem,
             this.manageDriveFiltersToolStripMenuItem,
             this.manageRegistryFiltersToolStripMenuItem,
             this.saveFiltersToolStripMenuItem,
@@ -226,6 +228,13 @@
             this.loadFiltersToolStripMenuItem.Text = "Load Filters";
             this.loadFiltersToolStripMenuItem.Click += new System.EventHandler(this.loadFiltersToolStripMenuItem_Click);
             // 
+            // editFiltersFileToolStripMenuItem
+            // 
+            this.editFiltersFileToolStripMenuItem.Name = "editFiltersFileToolStripMenuItem";
+            this.editFiltersFileToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.editFiltersFileToolStripMenuItem.Text = "Edit Filters File";
+            this.editFiltersFileToolStripMenuItem.Click += new System.EventHandler(this.editFiltersFileToolStripMenuItem_Click);
+            // 
             // stopToolStripMenuItem
             // 
             this.stopToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -247,9 +256,7 @@
             // 
             // chkRegistryMonitor
             // 
-            this.chkRegistryMonitor.Checked = true;
             this.chkRegistryMonitor.CheckOnClick = true;
-            this.chkRegistryMonitor.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkRegistryMonitor.Name = "chkRegistryMonitor";
             this.chkRegistryMonitor.Size = new System.Drawing.Size(169, 22);
             this.chkRegistryMonitor.Text = "Registry Monitor";
@@ -334,6 +341,7 @@
         private System.Windows.Forms.ToolStripMenuItem saveFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editFiltersFileToolStripMenuItem;
     }
 }
 

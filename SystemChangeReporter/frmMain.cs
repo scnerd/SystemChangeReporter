@@ -1,13 +1,6 @@
 ﻿/*
- * TODO: Get registry monitoring working (have "Current_User -> Environment -> Junk" key to play with)
- *   - Get updating for current keys
- *   - Detect adding/deleting keys
- * TODO(?): Implement tree view
- * TODO: Implement filtering dialogs
- * TODO: Implement exclusion filtering
  * TODO: Create documentation
  * TODO(?): Implement resetting (start) and freezing (stop)
- * TODO(?): Implement saving of data
  */
 
 using System;
@@ -43,7 +36,7 @@ namespace SystemChangeReporter
             Rename,
             Unknown
         }
-        private RegistryKey[] RegistryBases = { Registry.ClassesRoot, Registry.CurrentUser, Registry.CurrentConfig, Registry.LocalMachine, Registry.Users };
+        private RegistryKey[] RegistryBases = { Registry.CurrentUser, Registry.ClassesRoot, Registry.CurrentConfig, Registry.LocalMachine, Registry.Users };
         private Dictionary<ChangeType, Color> ChangeColors = new Dictionary<ChangeType, Color>();
 
         Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>> CurRegistry = new Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>>();
@@ -56,7 +49,9 @@ namespace SystemChangeReporter
 
         //string CurRegKeyInPoll = "";
         List<string> DriveFilters = new List<string>();
-        List<string> RegFilters = new List<string>();
+        HashSet<string> RegFilters = new HashSet<string>();
+
+        bool DriveFiltersChanged = false;
 
         #endregion
 
@@ -64,7 +59,7 @@ namespace SystemChangeReporter
 
         public frmMain()
         {
-            FILTERS_XML = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "filters.xml");
+            FILTERS_XML = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "filters.txt");
             ChangeColors.Add(ChangeType.Change, Color.Blue);
             ChangeColors.Add(ChangeType.Create, Color.Green);
             ChangeColors.Add(ChangeType.Delete, Color.Red);
@@ -125,6 +120,7 @@ namespace SystemChangeReporter
 
         private void btnStart_Click(object sender, EventArgs e)
         {
+            IsRunning = false;
             ResetDriveChanges();
             ResetRegistryChanges();
             IsRunning = true;
@@ -132,7 +128,16 @@ namespace SystemChangeReporter
 
         private void btnStop_Click(object sender, EventArgs e)
         {
-            IsRunning = false;
+            if (btnStop.Text.StartsWith("Freeze"))
+            {
+                IsRunning = false;
+                btnStop.Text = "Unfreeze Changes";
+            }
+            else
+            {
+                IsRunning = true;
+                btnStop.Text = "Freeze Changes";
+            }
         }
 
         private void txtPollTime_TextChanged(object sender, EventArgs e)
@@ -169,9 +174,9 @@ namespace SystemChangeReporter
             {
                 //Add a textbox for each existing filter
                 manageDriveFiltersToolStripMenuItem.DropDown.Items.Clear();
-                for (int i = 0; i <= DriveFilters.Count; i++)
+                for (int i = -1; i < DriveFilters.Count; i++)
                 {
-                    string Filter = i < DriveFilters.Count ? DriveFilters[i] : "";
+                    string Filter = i == -1 ? "" : DriveFilters[i];
                     ToolStripTextBox FilterBox = new ToolStripTextBox(Filter);
                     FilterBox.Text = Filter;
                     FilterBox.Tag = Filter;
@@ -189,6 +194,7 @@ namespace SystemChangeReporter
                     };
                     manageDriveFiltersToolStripMenuItem.DropDown.Items.Add(FilterBox);
                 }
+                DriveFiltersChanged = true;
             }
         }
 
@@ -198,9 +204,9 @@ namespace SystemChangeReporter
             {
                 //Add a textbox for each existing filter
                 manageRegistryFiltersToolStripMenuItem.DropDown.Items.Clear();
-                for (int i = 0; i <= RegFilters.Count; i++)
+                for (int i = 0; i < RegFilters.Count; i++)
                 {
-                    string Filter = i < RegFilters.Count ? RegFilters[i] : "";
+                    string Filter = i == -1 ? "" : RegFilters.AsEnumerable().ElementAt(i);
                     ToolStripTextBox FilterBox = new ToolStripTextBox(Filter);
                     FilterBox.Text = Filter;
                     FilterBox.Tag = Filter;
@@ -209,15 +215,15 @@ namespace SystemChangeReporter
                         int index = RegFilters.Count;
                         if (!"".Equals(FilterBox.Tag))
                         {
-                            index = RegFilters.IndexOf((string)FilterBox.Tag);
-                            RegFilters.RemoveAt(index);
+                            RegFilters.Remove((string)FilterBox.Tag);
                         }
                         if (!"".Equals(FilterBox.Text))
-                            RegFilters.Insert(index, FilterBox.Text);
+                            RegFilters.Add(FilterBox.Text);
                         FilterBox.Tag = FilterBox.Text;
                     };
                     manageRegistryFiltersToolStripMenuItem.DropDown.Items.Add(FilterBox);
                 }
+                //RegFiltersChanged = true;
             }
         }
 
@@ -236,6 +242,13 @@ namespace SystemChangeReporter
         private void helpToolStripMenuItem_Click(object sender, EventArgs e)
         {
             System.Diagnostics.Process.Start(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "README.txt"));
+        }
+
+        private void editFiltersFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!File.Exists(FILTERS_XML))
+                File.CreateText(FILTERS_XML);
+            System.Diagnostics.Process.Start(FILTERS_XML);
         }
 
         #endregion
@@ -270,6 +283,8 @@ namespace SystemChangeReporter
                 {
                     RegFilters.Add(RFilter.Groups[1].Value);
                 }
+                DriveFiltersChanged = true;
+                //RegFiltersChanged = true;
             }
         }
 
@@ -312,10 +327,34 @@ namespace SystemChangeReporter
             }
         }
 
-        public static Regex WildcardsToRegex(string[] patterns)
-        { return new Regex(String.Join("|", patterns.Select(s => WildcardToRegexStr(s)).ToArray()), RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline); }
+        List<Regex> FilterFileWildcard = new List<Regex>();
+        HashSet<string> FilterFileDirectIgnores = new HashSet<string>();
+        private bool IgnoreFile(string FilePath)
+        {
+            if (DriveFiltersChanged)
+            {
+                FilterFileWildcard = new List<Regex>();
+                FilterFileDirectIgnores = new HashSet<string>();
+                foreach (var Filter in DriveFilters)
+                {
+                    if (Filter.Contains('?') || Filter.Contains('*'))
+                        FilterFileWildcard.Add(new Regex(WildcardToRegexStr(Filter), RegexOptions.Compiled | RegexOptions.IgnoreCase));
+                    else
+                        FilterFileDirectIgnores.Add(Filter);
+                }
+            }
+            return FilterFileDirectIgnores.Contains(FilePath)
+                || FilterFileWildcard.AsParallel().Any(r => r.IsMatch(FilePath));
+        }
 
-        public static string WildcardToRegexStr(string pattern)
+        private bool IgnoreReg(string RegPath)
+        {
+            //Note that registry key names may include any printable character besides "\", thus wildcards cannot be an option
+            return RegFilters.Contains(RegPath);
+        }
+        //return new Regex(String.Join("|", patterns.Select(s => WildcardToRegexStr(s)).ToArray()), RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline); }
+
+        private string WildcardToRegexStr(string pattern)
         {
             //http://www.codeproject.com/Articles/11556/Converting-Wildcards-to-Regexes
             return "^" + Regex.Escape(pattern).
@@ -325,8 +364,11 @@ namespace SystemChangeReporter
 
         private void MarkOnTree(string Path, ChangeType Chng, TreeNodeCollection Tree, params char[] Delimiter)
         {
-            var Broken = Path.Split(Delimiter);
-            if (Broken.Length < 1)
+            var PreBreak = Path.Split(new string[]{"\\\\"}, StringSplitOptions.None);
+            var Broken = PreBreak[0].Split(Delimiter).ToList();
+            if(PreBreak.Length > 1)
+                Broken.Add(PreBreak[1]);
+            if (Broken.Count < 1)
                 return;
 
             var Base = Broken[0];
@@ -334,7 +376,7 @@ namespace SystemChangeReporter
             if (BaseNode == null)
                 BaseNode = Tree.Add(Base, Base);
 
-            if (Broken.Length < 2)
+            if (Broken.Count < 2)
                 BaseNode.ForeColor = ChangeColors[Chng];
             else
                 MarkOnSubTree(Broken.Skip(1).ToArray(), Chng, BaseNode);
@@ -367,7 +409,7 @@ namespace SystemChangeReporter
         {
             if (!treFiles.IsDisposed && IsRunning && chkDriveMonitor.Checked)
             {
-                if (WildcardsToRegex(DriveFilters.ToArray()).IsMatch(FilePath))
+                if (IgnoreFile(FilePath))
                     return;
 
                 FileLog("File changed (" + Chng.ToString() + "): " + FilePath);
@@ -389,11 +431,16 @@ namespace SystemChangeReporter
 
         #region Registry
 
+        bool IsPolling = false;
         private void PollRegistry(bool SecurityCheck = true)
         {
+            //Flag to prevent multiple asynchronous polls
+            if (IsPolling)
+                return;
+            IsPolling = true;
+
             RegistryLog("Beginning registry update");
             List<string> CheckedStrs = new List<string>(CurRegistry.Count);
-            Regex RegFiltersCompiled = WildcardsToRegex(RegFilters.ToArray());
             var PrevRegistryKeys = CurRegistry.Keys;
 
             try
@@ -401,8 +448,8 @@ namespace SystemChangeReporter
                 //Parallel.ForEach(RegistryBases, (Root) =>
                 foreach (var Root in RegistryBases)
                 {
-                    if (!RegFiltersCompiled.IsMatch(Root.Name))
-                        UpdateRegKey(Root, ref CheckedStrs, RegFiltersCompiled, SecurityCheck);
+                    if (!IgnoreReg(Root.Name))
+                        UpdateRegKey(Root, ref CheckedStrs, SecurityCheck);
                 }
                 //);
             }
@@ -426,22 +473,22 @@ namespace SystemChangeReporter
             }
 
             RegistryLog("Registry update complete");
+            IsPolling = false;
         }
 
-        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, Regex Filters, bool SecurityCheck)
+        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, bool SecurityCheck)
         {
             CheckedStrs.Add(RootKey.Name);
 
             if (!CurRegistry.ContainsKey(RootKey.Name))
             {
                 ChangeRegistry(RootKey, ChangeType.Create);
-                lock (CurRegistry)
-                    CurRegistry.Add(RootKey.Name, new Dictionary<string, Tuple<RegistryValueKind, object>>());
+                CurRegistry.Add(RootKey.Name, new Dictionary<string, Tuple<RegistryValueKind, object>>());
             }
 
             foreach (var key in RootKey.GetValueNames())
             {
-                if (Filters.IsMatch(RootKey.Name + "\\" + key))
+                if (IgnoreReg(RootKey.Name + "\\" + key))
                     continue;
 
                 var CurrentValue = RootKey.GetValue(key);
@@ -455,30 +502,42 @@ namespace SystemChangeReporter
                 }
                 else
                 {
+                    if (RootKey.Name.Equals(@"HKEY_CURRENT_USER\Environment\Junk"))
+                        System.Threading.Thread.Sleep(1);
                     bool Changed = CurrentKind != StoredKVP.Value.Item1;
                     if (!Changed)
-                        switch (CurrentKind)
+                        try
                         {
-                            case RegistryValueKind.None:
-                                Changed = false;
-                                break;
-                            case RegistryValueKind.ExpandString:
-                            case RegistryValueKind.String:
-                            case RegistryValueKind.Unknown:
-                                Changed = !CurrentValue.Equals(StoredKVP.Value.Item2);
-                                break;
-                            case RegistryValueKind.Binary:
-                                Changed = !((byte[])CurrentValue).SequenceEqual((byte[])StoredKVP.Value.Item2);
-                                break;
-                            case RegistryValueKind.DWord:
-                                Changed = (int)CurrentValue != (int)StoredKVP.Value.Item2;
-                                break;
-                            case RegistryValueKind.QWord:
-                                Changed = (long)CurrentValue != (long)StoredKVP.Value.Item2;
-                                break;
-                            case RegistryValueKind.MultiString:
-                                Changed = !((string[])CurrentValue).SequenceEqual((string[])StoredKVP.Value.Item2);
-                                break;
+                            switch (CurrentKind)
+                            {
+                                case RegistryValueKind.None:
+                                    Changed = false;
+                                    break;
+                                case RegistryValueKind.ExpandString:
+                                case RegistryValueKind.String:
+                                case RegistryValueKind.Unknown:
+                                case RegistryValueKind.DWord:
+                                case RegistryValueKind.QWord:
+                                    if (CurrentValue == null)
+                                        Changed = StoredKVP.Value.Item2 != null;
+                                    else
+                                        Changed = !CurrentValue.Equals(StoredKVP.Value.Item2);
+                                    break;
+                                case RegistryValueKind.Binary:
+                                    Changed = !((Byte[])CurrentValue).SequenceEqual((Byte[])StoredKVP.Value.Item2);
+                                    break;
+                                case RegistryValueKind.MultiString:
+                                    Changed = !((String[])CurrentValue).SequenceEqual((String[])StoredKVP.Value.Item2);
+                                    break;
+                            }
+                        }
+                        catch (InvalidCastException ex)
+                        {
+                            MessageBox.Show(ex.ToString());
+                        }
+                        catch (NullReferenceException ex)
+                        {
+                            MessageBox.Show(ex.ToString());
                         }
                     if (Changed)
                     {
@@ -487,10 +546,16 @@ namespace SystemChangeReporter
                     }
                 }
             }
+            var DeletedKeys = CurRegistry[RootKey.Name].Select(kvp => kvp.Key).Except(RootKey.GetValueNames()).ToArray();
+            foreach (var DeletedKey in DeletedKeys)
+            {
+                ChangeRegistry(RootKey, ChangeType.Delete, DeletedKey);
+                CurRegistry[RootKey.Name].Remove(DeletedKey);
+            }
 
             foreach (var SubKeyName in RootKey.GetSubKeyNames())
             {
-                if (Filters.IsMatch(RootKey.Name + "\\" + SubKeyName))
+                if (IgnoreReg(RootKey.Name + "\\" + SubKeyName))
                     continue;
                 if (SecurityCheck)
                 {
@@ -506,7 +571,7 @@ namespace SystemChangeReporter
                         if (SubKey == null)
                             RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
                         else
-                            UpdateRegKey(SubKey, ref CheckedStrs, Filters, SecurityCheck);
+                            UpdateRegKey(SubKey, ref CheckedStrs, SecurityCheck);
                         //HadPermission = true;
                         //break;
                         //    }
@@ -535,7 +600,7 @@ namespace SystemChangeReporter
                         RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
                     }
                     else
-                        UpdateRegKey(SubKey, ref CheckedStrs, Filters, SecurityCheck);
+                        UpdateRegKey(SubKey, ref CheckedStrs, SecurityCheck);
                 }
             }
 
@@ -546,6 +611,8 @@ namespace SystemChangeReporter
         {
             txtRegLog.Text = "";
             treReg.Nodes.Clear();
+            CurRegistry = new Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>>();
+            PollRegistry();
         }
 
         private void ChangeRegistry(RegistryKey RegKey, ChangeType Chng, string ChangedValueName = "")
@@ -555,27 +622,27 @@ namespace SystemChangeReporter
 
         private void ChangeRegistry(string KeyPath, ChangeType Chng, string ChangedValueName = "")
         {
-            if (!treReg.IsDisposed && IsRunning && chkRegistryMonitor.Checked)
+            if (!treReg.IsDisposed && IsRunning)
             {
                 RegistryLog("Registry changed (" + Chng.ToString() + "): " + KeyPath +
-                    (ChangedValueName.Equals("") ? "" : "\\" + ChangedValueName));
+                    (ChangedValueName.Equals("") ? "" : " -> " + ChangedValueName));
 
-                treReg.Invoke(new Action(() => MarkOnTree(KeyPath + (ChangedValueName.Equals("") ? "" : "\\" + ChangedValueName),
+                treReg.Invoke(new Action(() => MarkOnTree(KeyPath + (ChangedValueName.Equals("") ? "" : "\\\\" + ChangedValueName),
                     Chng, treReg.Nodes, '\\')));
             }
         }
 
         private void RegistryLog(string Text, bool ForcePrint = false)
         {
-            if (!txtRegLog.IsDisposed && ((IsRunning && chkRegistryMonitor.Checked) || ForcePrint))
+            if (!txtRegLog.IsDisposed && (IsRunning || ForcePrint))
             {
                 var Time = DateTime.Now.ToString(TIME_FORMAT);
-                txtRegLog.BeginInvoke((Action)(() => txtRegLog.AppendText(Time + Text + EOL)));
+                txtRegLog.BeginInvoke(new Action(() => txtRegLog.AppendText(Time + Text + EOL)));
             }
         }
 
         #endregion
 
-
+        
     }
 }
