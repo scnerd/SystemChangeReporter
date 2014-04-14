@@ -39,7 +39,6 @@
             this.txtFileLog = new System.Windows.Forms.TextBox();
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.cmbDrive = new System.Windows.Forms.ToolStripComboBox();
-            this.btnSave = new System.Windows.Forms.ToolStripMenuItem();
             this.filterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageDriveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nothinMuchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -53,8 +52,8 @@
             this.registryPollTimeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.txtPollTime = new System.Windows.Forms.ToolStripTextBox();
             this.manuallyPollToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.tmrPollRegistry = new System.Windows.Forms.Timer(this.components);
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.tmrPollRegistry = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.fsWatcher)).BeginInit();
             this.tblLayout.SuspendLayout();
             this.menuStrip.SuspendLayout();
@@ -93,7 +92,7 @@
             this.tblLayout.Location = new System.Drawing.Point(0, 27);
             this.tblLayout.Name = "tblLayout";
             this.tblLayout.RowCount = 3;
-            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 78.89909F));
+            this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 78.89908F));
             this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 21.10092F));
             this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34F));
             this.tblLayout.Size = new System.Drawing.Size(696, 362);
@@ -155,7 +154,6 @@
             // 
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.cmbDrive,
-            this.btnSave,
             this.filterToolStripMenuItem,
             this.stopToolStripMenuItem,
             this.manuallyPollToolStripMenuItem,
@@ -173,12 +171,6 @@
             this.cmbDrive.Text = "Drive";
             this.cmbDrive.SelectedIndexChanged += new System.EventHandler(this.cmbDrive_SelectedIndexChanged);
             // 
-            // btnSave
-            // 
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(43, 23);
-            this.btnSave.Text = "Save";
-            // 
             // filterToolStripMenuItem
             // 
             this.filterToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -195,7 +187,7 @@
             this.manageDriveFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem});
             this.manageDriveFiltersToolStripMenuItem.Name = "manageDriveFiltersToolStripMenuItem";
-            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.manageDriveFiltersToolStripMenuItem.Text = "Driver Filters";
             this.manageDriveFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageDriveFiltersToolStripMenuItem_DropDownOpening);
             // 
@@ -210,7 +202,7 @@
             this.manageRegistryFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem1});
             this.manageRegistryFiltersToolStripMenuItem.Name = "manageRegistryFiltersToolStripMenuItem";
-            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.manageRegistryFiltersToolStripMenuItem.Text = "Registry Filters";
             this.manageRegistryFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageRegistryFiltersToolStripMenuItem_DropDownOpening);
             // 
@@ -223,14 +215,16 @@
             // saveFiltersToolStripMenuItem
             // 
             this.saveFiltersToolStripMenuItem.Name = "saveFiltersToolStripMenuItem";
-            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.saveFiltersToolStripMenuItem.Text = "Save Filters";
+            this.saveFiltersToolStripMenuItem.Click += new System.EventHandler(this.saveFiltersToolStripMenuItem_Click);
             // 
             // loadFiltersToolStripMenuItem
             // 
             this.loadFiltersToolStripMenuItem.Name = "loadFiltersToolStripMenuItem";
-            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.loadFiltersToolStripMenuItem.Text = "Load Filters";
+            this.loadFiltersToolStripMenuItem.Click += new System.EventHandler(this.loadFiltersToolStripMenuItem_Click);
             // 
             // stopToolStripMenuItem
             // 
@@ -281,15 +275,16 @@
             this.manuallyPollToolStripMenuItem.Text = "Manually Poll";
             this.manuallyPollToolStripMenuItem.Click += new System.EventHandler(this.btnPollRegistry_Click);
             // 
-            // tmrPollRegistry
-            // 
-            this.tmrPollRegistry.Tick += new System.EventHandler(this.tmrPollRegistry_Tick);
-            // 
             // helpToolStripMenuItem
             // 
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 23);
             this.helpToolStripMenuItem.Text = "Help";
+            this.helpToolStripMenuItem.Click += new System.EventHandler(this.helpToolStripMenuItem_Click);
+            // 
+            // tmrPollRegistry
+            // 
+            this.tmrPollRegistry.Tick += new System.EventHandler(this.tmrPollRegistry_Tick);
             // 
             // frmMain
             // 
@@ -324,7 +319,6 @@
         private System.Windows.Forms.ToolStripComboBox cmbDrive;
         private System.Windows.Forms.TextBox txtRegLog;
         private System.Windows.Forms.TextBox txtFileLog;
-        private System.Windows.Forms.ToolStripMenuItem btnSave;
         private System.Windows.Forms.ToolStripMenuItem filterToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageDriveFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageRegistryFiltersToolStripMenuItem;
