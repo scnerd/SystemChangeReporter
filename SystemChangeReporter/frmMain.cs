@@ -40,12 +40,12 @@ namespace SystemChangeReporter
         private Dictionary<ChangeType, Color> ChangeColors = new Dictionary<ChangeType, Color>();
 
         Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>> CurRegistry = new Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>>();
-        int RegistryPollTime = 5000;
+        int RegistryPollTime = 10;
         bool IsRunning = false;
         readonly string FILTERS_XML;
         readonly Regex
-            DFILTER_IN = new Regex(@"^D'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline),
-            RFILTER_IN = new Regex(@"^R'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            DFILTER_IN = new Regex(@"^d'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline),
+            RFILTER_IN = new Regex(@"^r'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
         //string CurRegKeyInPoll = "";
         List<string> DriveFilters = new List<string>();
@@ -146,7 +146,7 @@ namespace SystemChangeReporter
             if (int.TryParse(txtPollTime.Text, out NewTime))
                 RegistryPollTime = NewTime;
             txtPollTime.Text = RegistryPollTime.ToString();
-            tmrPollRegistry.Interval = RegistryPollTime;
+            tmrPollRegistry.Interval = RegistryPollTime * 1000;
         }
 
         private void tmrPollRegistry_Tick(object sender, EventArgs e)
@@ -182,6 +182,12 @@ namespace SystemChangeReporter
                     FilterBox.Tag = Filter;
                     FilterBox.TextChanged += (s, ev) =>
                     {
+                        var CursorLoc = FilterBox.SelectionStart;
+                        var CursorWid = FilterBox.SelectionLength;
+                        FilterBox.Text = FilterBox.Text.ToLower();
+                        FilterBox.SelectionStart = CursorLoc;
+                        FilterBox.SelectionLength = CursorWid;
+
                         int index = DriveFilters.Count;
                         if (!"".Equals(FilterBox.Tag))
                         {
@@ -212,6 +218,12 @@ namespace SystemChangeReporter
                     FilterBox.Tag = Filter;
                     FilterBox.TextChanged += (s, ev) =>
                     {
+                        var CursorLoc = FilterBox.SelectionStart;
+                        var CursorWid = FilterBox.SelectionLength;
+                        FilterBox.Text = FilterBox.Text.ToLower();
+                        FilterBox.SelectionStart = CursorLoc;
+                        FilterBox.SelectionLength = CursorWid;
+
                         int index = RegFilters.Count;
                         if (!"".Equals(FilterBox.Tag))
                         {
@@ -274,7 +286,7 @@ namespace SystemChangeReporter
         {
             if (File.Exists(FILTERS_XML))
             {
-                string FiltersFile = File.ReadAllText(FILTERS_XML);
+                string FiltersFile = File.ReadAllText(FILTERS_XML).ToLower();
                 foreach (Match DFilter in DFILTER_IN.Matches(FiltersFile))
                 {
                     DriveFilters.Add(DFilter.Groups[1].Value);
@@ -343,6 +355,7 @@ namespace SystemChangeReporter
                         FilterFileDirectIgnores.Add(Filter);
                 }
             }
+            FilePath = FilePath.ToLower();
             return FilterFileDirectIgnores.Contains(FilePath)
                 || FilterFileWildcard.AsParallel().Any(r => r.IsMatch(FilePath));
         }
@@ -350,7 +363,7 @@ namespace SystemChangeReporter
         private bool IgnoreReg(string RegPath)
         {
             //Note that registry key names may include any printable character besides "\", thus wildcards cannot be an option
-            return RegFilters.Contains(RegPath);
+            return RegFilters.Contains(RegPath.ToLower());
         }
         //return new Regex(String.Join("|", patterns.Select(s => WildcardToRegexStr(s)).ToArray()), RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline); }
 

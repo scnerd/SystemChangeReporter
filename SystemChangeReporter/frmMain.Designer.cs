@@ -187,7 +187,7 @@
             // editFiltersFileToolStripMenuItem
             // 
             this.editFiltersFileToolStripMenuItem.Name = "editFiltersFileToolStripMenuItem";
-            this.editFiltersFileToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.editFiltersFileToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.editFiltersFileToolStripMenuItem.Text = "Edit Filters File";
             this.editFiltersFileToolStripMenuItem.Click += new System.EventHandler(this.editFiltersFileToolStripMenuItem_Click);
             // 
@@ -196,14 +196,14 @@
             this.manageDriveFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem});
             this.manageDriveFiltersToolStripMenuItem.Name = "manageDriveFiltersToolStripMenuItem";
-            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
-            this.manageDriveFiltersToolStripMenuItem.Text = "Driver Filters";
+            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.manageDriveFiltersToolStripMenuItem.Text = "Drive Filters";
             this.manageDriveFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageDriveFiltersToolStripMenuItem_DropDownOpening);
             // 
             // nothinMuchToolStripMenuItem
             // 
             this.nothinMuchToolStripMenuItem.Name = "nothinMuchToolStripMenuItem";
-            this.nothinMuchToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.nothinMuchToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.nothinMuchToolStripMenuItem.Text = "Nothin\' much";
             // 
             // manageRegistryFiltersToolStripMenuItem
@@ -211,27 +211,27 @@
             this.manageRegistryFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.nothinMuchToolStripMenuItem1});
             this.manageRegistryFiltersToolStripMenuItem.Name = "manageRegistryFiltersToolStripMenuItem";
-            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.manageRegistryFiltersToolStripMenuItem.Text = "Registry Filters";
             this.manageRegistryFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageRegistryFiltersToolStripMenuItem_DropDownOpening);
             // 
             // nothinMuchToolStripMenuItem1
             // 
             this.nothinMuchToolStripMenuItem1.Name = "nothinMuchToolStripMenuItem1";
-            this.nothinMuchToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.nothinMuchToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.nothinMuchToolStripMenuItem1.Text = "Nothin\' much";
             // 
             // saveFiltersToolStripMenuItem
             // 
             this.saveFiltersToolStripMenuItem.Name = "saveFiltersToolStripMenuItem";
-            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.saveFiltersToolStripMenuItem.Text = "Save Filters";
             this.saveFiltersToolStripMenuItem.Click += new System.EventHandler(this.saveFiltersToolStripMenuItem_Click);
             // 
             // loadFiltersToolStripMenuItem
             // 
             this.loadFiltersToolStripMenuItem.Name = "loadFiltersToolStripMenuItem";
-            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.loadFiltersToolStripMenuItem.Text = "Load Filters";
             this.loadFiltersToolStripMenuItem.Click += new System.EventHandler(this.loadFiltersToolStripMenuItem_Click);
             // 
