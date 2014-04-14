@@ -43,16 +43,16 @@ namespace SystemChangeReporter
             Rename,
             Unknown
         }
-        private RegistryKey[] RegistryBases = { Registry.ClassesRoot, Registry.CurrentUser, Registry.CurrentConfig, Registry.LocalMachine, Registry.PerformanceData, Registry.Users };
+        private RegistryKey[] RegistryBases = { Registry.ClassesRoot, Registry.CurrentUser, Registry.CurrentConfig, Registry.LocalMachine, Registry.Users };
         private Dictionary<ChangeType, Color> ChangeColors = new Dictionary<ChangeType, Color>();
 
-        Dictionary<string, Dictionary<string, object>> CurRegistry = new Dictionary<string, Dictionary<string, object>>();
+        Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>> CurRegistry = new Dictionary<string, Dictionary<string, Tuple<RegistryValueKind, object>>>();
         int RegistryPollTime = 5000;
         bool IsRunning = false;
         readonly string FILTERS_XML;
         readonly Regex
-            DFILTER_IN = new Regex(@"^D'([^']*)'$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-            RFILTER_IN = new Regex(@"^R'([^']*)'$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            DFILTER_IN = new Regex(@"^D'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline),
+            RFILTER_IN = new Regex(@"^R'([^']*)'\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
         //string CurRegKeyInPoll = "";
         List<string> DriveFilters = new List<string>();
@@ -64,7 +64,7 @@ namespace SystemChangeReporter
 
         public frmMain()
         {
-            FILTERS_XML = Path.GetDirectoryName(Application.ExecutablePath) + "filters.xml";
+            FILTERS_XML = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "filters.xml");
             ChangeColors.Add(ChangeType.Change, Color.Blue);
             ChangeColors.Add(ChangeType.Create, Color.Green);
             ChangeColors.Add(ChangeType.Delete, Color.Red);
@@ -259,14 +259,17 @@ namespace SystemChangeReporter
 
         private void LoadFilters()
         {
-            string FiltersFile = File.ReadAllText(FILTERS_XML);
-            foreach (Match DFilter in DFILTER_IN.Matches(FiltersFile))
+            if (File.Exists(FILTERS_XML))
             {
-                DriveFilters.Add(DFilter.Groups[1].Value);
-            }
-            foreach (Match RFilter in RFILTER_IN.Matches(FiltersFile))
-            {
-                RegFilters.Add(RFilter.Groups[1].Value);
+                string FiltersFile = File.ReadAllText(FILTERS_XML);
+                foreach (Match DFilter in DFILTER_IN.Matches(FiltersFile))
+                {
+                    DriveFilters.Add(DFilter.Groups[1].Value);
+                }
+                foreach (Match RFilter in RFILTER_IN.Matches(FiltersFile))
+                {
+                    RegFilters.Add(RFilter.Groups[1].Value);
+                }
             }
         }
 
@@ -287,12 +290,37 @@ namespace SystemChangeReporter
             }
         }
 
-        public static Regex WildcardToRegex(string pattern)
+        private Type ConvertRegTypeToType(RegistryValueKind Kind)
+        {
+            switch (Kind)
+            {
+                case RegistryValueKind.Binary:
+                    return typeof(byte[]);
+                case RegistryValueKind.DWord:
+                    return typeof(int);
+                case RegistryValueKind.QWord:
+                    return typeof(long);
+                case RegistryValueKind.ExpandString:
+                case RegistryValueKind.String:
+                    return typeof(string);
+                case RegistryValueKind.MultiString:
+                    return typeof(string[]);
+                case RegistryValueKind.None:
+                case RegistryValueKind.Unknown:
+                default:
+                    return null;
+            }
+        }
+
+        public static Regex WildcardsToRegex(string[] patterns)
+        { return new Regex(String.Join("|", patterns.Select(s => WildcardToRegexStr(s)).ToArray()), RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline); }
+
+        public static string WildcardToRegexStr(string pattern)
         {
             //http://www.codeproject.com/Articles/11556/Converting-Wildcards-to-Regexes
-            return new Regex("^" + Regex.Escape(pattern).
+            return "^" + Regex.Escape(pattern).
                                Replace(@"\*", ".*").
-                               Replace(@"\?", ".") + "$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                               Replace(@"\?", ".") + "$";
         }
 
         private void MarkOnTree(string Path, ChangeType Chng, TreeNodeCollection Tree, params char[] Delimiter)
@@ -339,7 +367,7 @@ namespace SystemChangeReporter
         {
             if (!treFiles.IsDisposed && IsRunning && chkDriveMonitor.Checked)
             {
-                if (DriveFilters.Any(s => WildcardToRegex(s).IsMatch(FilePath)))
+                if (WildcardsToRegex(DriveFilters.ToArray()).IsMatch(FilePath))
                     return;
 
                 FileLog("File changed (" + Chng.ToString() + "): " + FilePath);
@@ -361,11 +389,11 @@ namespace SystemChangeReporter
 
         #region Registry
 
-        private void PollRegistry(bool SecurityCheck = false)
+        private void PollRegistry(bool SecurityCheck = true)
         {
             RegistryLog("Beginning registry update");
             List<string> CheckedStrs = new List<string>(CurRegistry.Count);
-            List<Regex> RegFiltersCompiled = RegFilters.Select(s => WildcardToRegex(s)).ToList();
+            Regex RegFiltersCompiled = WildcardsToRegex(RegFilters.ToArray());
             var PrevRegistryKeys = CurRegistry.Keys;
 
             try
@@ -373,8 +401,8 @@ namespace SystemChangeReporter
                 //Parallel.ForEach(RegistryBases, (Root) =>
                 foreach (var Root in RegistryBases)
                 {
-                    if (!RegFiltersCompiled.Any(filt => filt.IsMatch(Root.Name)))
-                        UpdateRegKey(Root, ref CheckedStrs, ref RegFiltersCompiled, SecurityCheck);
+                    if (!RegFiltersCompiled.IsMatch(Root.Name))
+                        UpdateRegKey(Root, ref CheckedStrs, RegFiltersCompiled, SecurityCheck);
                 }
                 //);
             }
@@ -400,7 +428,7 @@ namespace SystemChangeReporter
             RegistryLog("Registry update complete");
         }
 
-        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, ref List<Regex> Filters, bool SecurityCheck)
+        private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, Regex Filters, bool SecurityCheck)
         {
             CheckedStrs.Add(RootKey.Name);
 
@@ -408,32 +436,61 @@ namespace SystemChangeReporter
             {
                 ChangeRegistry(RootKey, ChangeType.Create);
                 lock (CurRegistry)
-                    CurRegistry.Add(RootKey.Name, new Dictionary<string, object>());
+                    CurRegistry.Add(RootKey.Name, new Dictionary<string, Tuple<RegistryValueKind, object>>());
             }
 
             foreach (var key in RootKey.GetValueNames())
             {
-                if (Filters.Any(filt => filt.IsMatch(RootKey.Name + "\\" + key)))
+                if (Filters.IsMatch(RootKey.Name + "\\" + key))
                     continue;
 
                 var CurrentValue = RootKey.GetValue(key);
-                var CurrentKVP = new KeyValuePair<string, object>(key, CurrentValue);
+                var CurrentKind = RootKey.GetValueKind(key);
+                var CurrentKVP = new KeyValuePair<string, Tuple<RegistryValueKind, object>>(key, new Tuple<RegistryValueKind, object>(CurrentKind, CurrentValue));
                 var StoredKVP = CurRegistry[RootKey.Name].FirstOrDefault(kvp => kvp.Key == key);
-                if (StoredKVP.Equals(default(KeyValuePair<string, object>)))
+                if (StoredKVP.Equals(default(KeyValuePair<string, Tuple<RegistryValueKind, object>>)))
                 {
-                    ChangeRegistry(RootKey, ChangeType.Create, CurrentKVP);
-                    CurRegistry[RootKey.Name].Add(key, CurrentValue);
+                    ChangeRegistry(RootKey, ChangeType.Create, key);
+                    CurRegistry[RootKey.Name].Add(key, CurrentKVP.Value);
                 }
-                else if (!StoredKVP.Value.Equals(CurrentValue))
+                else
                 {
-                    ChangeRegistry(RootKey, ChangeType.Change, new KeyValuePair<string, object>(key, CurrentValue));
-                    CurRegistry[RootKey.Name][key] = CurrentValue;
+                    bool Changed = CurrentKind != StoredKVP.Value.Item1;
+                    if (!Changed)
+                        switch (CurrentKind)
+                        {
+                            case RegistryValueKind.None:
+                                Changed = false;
+                                break;
+                            case RegistryValueKind.ExpandString:
+                            case RegistryValueKind.String:
+                            case RegistryValueKind.Unknown:
+                                Changed = !CurrentValue.Equals(StoredKVP.Value.Item2);
+                                break;
+                            case RegistryValueKind.Binary:
+                                Changed = !((byte[])CurrentValue).SequenceEqual((byte[])StoredKVP.Value.Item2);
+                                break;
+                            case RegistryValueKind.DWord:
+                                Changed = (int)CurrentValue != (int)StoredKVP.Value.Item2;
+                                break;
+                            case RegistryValueKind.QWord:
+                                Changed = (long)CurrentValue != (long)StoredKVP.Value.Item2;
+                                break;
+                            case RegistryValueKind.MultiString:
+                                Changed = !((string[])CurrentValue).SequenceEqual((string[])StoredKVP.Value.Item2);
+                                break;
+                        }
+                    if (Changed)
+                    {
+                        ChangeRegistry(RootKey, ChangeType.Change, key);
+                        CurRegistry[RootKey.Name][key] = CurrentKVP.Value;
+                    }
                 }
             }
 
             foreach (var SubKeyName in RootKey.GetSubKeyNames())
             {
-                if (Filters.Any(filt => filt.IsMatch(RootKey.Name + "\\" + SubKeyName)))
+                if (Filters.IsMatch(RootKey.Name + "\\" + SubKeyName))
                     continue;
                 if (SecurityCheck)
                 {
@@ -449,7 +506,7 @@ namespace SystemChangeReporter
                         if (SubKey == null)
                             RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
                         else
-                            UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
+                            UpdateRegKey(SubKey, ref CheckedStrs, Filters, SecurityCheck);
                         //HadPermission = true;
                         //break;
                         //    }
@@ -478,7 +535,7 @@ namespace SystemChangeReporter
                         RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
                     }
                     else
-                        UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
+                        UpdateRegKey(SubKey, ref CheckedStrs, Filters, SecurityCheck);
                 }
             }
 
@@ -491,20 +548,20 @@ namespace SystemChangeReporter
             treReg.Nodes.Clear();
         }
 
-        private void ChangeRegistry(RegistryKey RegKey, ChangeType Chng, KeyValuePair<string, object> ChangedValue = default(KeyValuePair<string, object>))
+        private void ChangeRegistry(RegistryKey RegKey, ChangeType Chng, string ChangedValueName = "")
         {
-            ChangeRegistry(RegKey.Name, Chng, ChangedValue);
+            ChangeRegistry(RegKey.Name, Chng, ChangedValueName);
         }
 
-        private void ChangeRegistry(string KeyPath, ChangeType Chng, KeyValuePair<string, object> ChangedValue = default(KeyValuePair<string, object>))
+        private void ChangeRegistry(string KeyPath, ChangeType Chng, string ChangedValueName = "")
         {
             if (!treReg.IsDisposed && IsRunning && chkRegistryMonitor.Checked)
             {
                 RegistryLog("Registry changed (" + Chng.ToString() + "): " + KeyPath +
-                    (ChangedValue.Equals(default(KeyValuePair<string, object>)) ? "" : "\\" + ChangedValue.Key));
+                    (ChangedValueName.Equals("") ? "" : "\\" + ChangedValueName));
 
-                MarkOnTree(KeyPath + (ChangedValue.Equals(default(KeyValuePair<string, object>)) ? "" : "\\" + ChangedValue.Key),
-                    Chng, treReg.Nodes, '\\');
+                treReg.Invoke(new Action(() => MarkOnTree(KeyPath + (ChangedValueName.Equals("") ? "" : "\\" + ChangedValueName),
+                    Chng, treReg.Nodes, '\\')));
             }
         }
 
