@@ -42,7 +42,11 @@
             this.btnSave = new System.Windows.Forms.ToolStripMenuItem();
             this.filterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageDriveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.nothinMuchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageRegistryFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.nothinMuchToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.loadFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.chkDriveMonitor = new System.Windows.Forms.ToolStripMenuItem();
             this.chkRegistryMonitor = new System.Windows.Forms.ToolStripMenuItem();
@@ -50,6 +54,7 @@
             this.txtPollTime = new System.Windows.Forms.ToolStripTextBox();
             this.manuallyPollToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tmrPollRegistry = new System.Windows.Forms.Timer(this.components);
+            this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.fsWatcher)).BeginInit();
             this.tblLayout.SuspendLayout();
             this.menuStrip.SuspendLayout();
@@ -68,7 +73,6 @@
             // treFiles
             // 
             this.treFiles.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.treFiles.Enabled = false;
             this.treFiles.Location = new System.Drawing.Point(3, 3);
             this.treFiles.Name = "treFiles";
             this.treFiles.Size = new System.Drawing.Size(342, 252);
@@ -109,7 +113,6 @@
             // treReg
             // 
             this.treReg.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.treReg.Enabled = false;
             this.treReg.Location = new System.Drawing.Point(351, 3);
             this.treReg.Name = "treReg";
             this.treReg.Size = new System.Drawing.Size(342, 252);
@@ -155,7 +158,8 @@
             this.btnSave,
             this.filterToolStripMenuItem,
             this.stopToolStripMenuItem,
-            this.manuallyPollToolStripMenuItem});
+            this.manuallyPollToolStripMenuItem,
+            this.helpToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(696, 27);
@@ -179,22 +183,54 @@
             // 
             this.filterToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.manageDriveFiltersToolStripMenuItem,
-            this.manageRegistryFiltersToolStripMenuItem});
+            this.manageRegistryFiltersToolStripMenuItem,
+            this.saveFiltersToolStripMenuItem,
+            this.loadFiltersToolStripMenuItem});
             this.filterToolStripMenuItem.Name = "filterToolStripMenuItem";
             this.filterToolStripMenuItem.Size = new System.Drawing.Size(45, 23);
             this.filterToolStripMenuItem.Text = "Filter";
             // 
             // manageDriveFiltersToolStripMenuItem
             // 
+            this.manageDriveFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.nothinMuchToolStripMenuItem});
             this.manageDriveFiltersToolStripMenuItem.Name = "manageDriveFiltersToolStripMenuItem";
-            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
-            this.manageDriveFiltersToolStripMenuItem.Text = "Manage Drive Filters";
+            this.manageDriveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.manageDriveFiltersToolStripMenuItem.Text = "Driver Filters";
+            this.manageDriveFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageDriveFiltersToolStripMenuItem_DropDownOpening);
+            // 
+            // nothinMuchToolStripMenuItem
+            // 
+            this.nothinMuchToolStripMenuItem.Name = "nothinMuchToolStripMenuItem";
+            this.nothinMuchToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.nothinMuchToolStripMenuItem.Text = "Nothin\' much";
             // 
             // manageRegistryFiltersToolStripMenuItem
             // 
+            this.manageRegistryFiltersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.nothinMuchToolStripMenuItem1});
             this.manageRegistryFiltersToolStripMenuItem.Name = "manageRegistryFiltersToolStripMenuItem";
-            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
-            this.manageRegistryFiltersToolStripMenuItem.Text = "Manage Registry Filters";
+            this.manageRegistryFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.manageRegistryFiltersToolStripMenuItem.Text = "Registry Filters";
+            this.manageRegistryFiltersToolStripMenuItem.DropDownOpening += new System.EventHandler(this.manageRegistryFiltersToolStripMenuItem_DropDownOpening);
+            // 
+            // nothinMuchToolStripMenuItem1
+            // 
+            this.nothinMuchToolStripMenuItem1.Name = "nothinMuchToolStripMenuItem1";
+            this.nothinMuchToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.nothinMuchToolStripMenuItem1.Text = "Nothin\' much";
+            // 
+            // saveFiltersToolStripMenuItem
+            // 
+            this.saveFiltersToolStripMenuItem.Name = "saveFiltersToolStripMenuItem";
+            this.saveFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.saveFiltersToolStripMenuItem.Text = "Save Filters";
+            // 
+            // loadFiltersToolStripMenuItem
+            // 
+            this.loadFiltersToolStripMenuItem.Name = "loadFiltersToolStripMenuItem";
+            this.loadFiltersToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.loadFiltersToolStripMenuItem.Text = "Load Filters";
             // 
             // stopToolStripMenuItem
             // 
@@ -249,6 +285,12 @@
             // 
             this.tmrPollRegistry.Tick += new System.EventHandler(this.tmrPollRegistry_Tick);
             // 
+            // helpToolStripMenuItem
+            // 
+            this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
+            this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 23);
+            this.helpToolStripMenuItem.Text = "Help";
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -293,6 +335,11 @@
         private System.Windows.Forms.ToolStripTextBox txtPollTime;
         private System.Windows.Forms.Timer tmrPollRegistry;
         private System.Windows.Forms.ToolStripMenuItem manuallyPollToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem nothinMuchToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem nothinMuchToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem saveFiltersToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem loadFiltersToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
     }
 }
 

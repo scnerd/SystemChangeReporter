@@ -40,6 +40,7 @@ namespace SystemChangeReporter
             Unknown
         }
         private RegistryKey[] RegistryBases = { /*Registry.ClassesRoot, */Registry.CurrentUser, Registry.CurrentConfig, Registry.LocalMachine, Registry.PerformanceData, Registry.Users };
+        private Dictionary<ChangeType, Color> ChangeColors = new Dictionary<ChangeType,Color>();
 
         Dictionary<string, Dictionary<string, object>> PrevRegistry = new Dictionary<string, Dictionary<string, object>>();
         int RegistryPollTime = 5000;
@@ -53,6 +54,11 @@ namespace SystemChangeReporter
 
         public frmMain()
         {
+            ChangeColors.Add(ChangeType.Change, Color.Blue);
+            ChangeColors.Add(ChangeType.Create, Color.Green);
+            ChangeColors.Add(ChangeType.Delete, Color.Red);
+            ChangeColors.Add(ChangeType.Rename, Color.LightBlue);
+            ChangeColors.Add(ChangeType.Unknown, Color.Black);
             InitializeComponent();
         }
 
@@ -79,6 +85,57 @@ namespace SystemChangeReporter
         private void btnPollRegistry_Click(object sender, EventArgs e)
         {
             PollRegistry();
+        }
+
+        private void manageDriveFiltersToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
+        {
+            //Add a textbox for each existing filter
+            manageDriveFiltersToolStripMenuItem.DropDown.Items.Clear();
+            for (int i = 0; i <= DriveFilters.Count; i++)
+            {
+                string Filter = i < DriveFilters.Count ? DriveFilters[i] : "";
+                ToolStripTextBox FilterBox = new ToolStripTextBox(Filter);
+                FilterBox.Text = Filter;
+                FilterBox.Tag = Filter;
+                FilterBox.TextChanged += (s, ev) =>
+                {
+                    int index = DriveFilters.Count;
+                    if (!"".Equals(FilterBox.Tag))
+                    {
+                        DriveFilters.IndexOf((string)FilterBox.Tag);
+                        DriveFilters.RemoveAt(index);
+                    }
+                    if (!"".Equals(FilterBox.Text))
+                        DriveFilters.Insert(index, FilterBox.Text);
+                    FilterBox.Tag = FilterBox.Text;
+                };
+                manageDriveFiltersToolStripMenuItem.DropDown.Items.Add(FilterBox);
+            }
+        }
+
+        private void manageRegistryFiltersToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
+        {            //Add a textbox for each existing filter
+            manageRegistryFiltersToolStripMenuItem.DropDown.Items.Clear();
+            for (int i = 0; i <= RegFilters.Count; i++)
+            {
+                string Filter = i < RegFilters.Count ? RegFilters[i] : "";
+                ToolStripTextBox FilterBox = new ToolStripTextBox(Filter);
+                FilterBox.Text = Filter;
+                FilterBox.Tag = Filter;
+                FilterBox.TextChanged += (s, ev) =>
+                {
+                    int index = RegFilters.Count;
+                    if (!"".Equals(FilterBox.Tag))
+                    {
+                        RegFilters.IndexOf((string)FilterBox.Tag);
+                        RegFilters.RemoveAt(index);
+                    }
+                    if (!"".Equals(FilterBox.Text))
+                        RegFilters.Insert(index, FilterBox.Text);
+                    FilterBox.Tag = FilterBox.Text;
+                };
+                manageRegistryFiltersToolStripMenuItem.DropDown.Items.Add(FilterBox);
+            }
         }
 
         #endregion
@@ -131,6 +188,11 @@ namespace SystemChangeReporter
         #endregion
 
         #region HELPERS
+
+        private void SaveFilters()
+        {
+
+        }
 
         private void LoadFilters()
         {
@@ -209,18 +271,6 @@ namespace SystemChangeReporter
             treFiles.Nodes.Clear();
         }
 
-        private void ChangeFile(string FilePath, ChangeType Chng)
-        {
-            if (IsRunning && chkDriveMonitor.Checked)
-                FileLog("File changed (" + Chng.ToString() + "): " + FilePath);
-        }
-
-        private void FileLog(string Text)
-        {
-            if (IsRunning && chkDriveMonitor.Checked)
-                txtFileLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL);
-        }
-
         private void PollRegistry(bool SecurityCheck = false)
         {
             RegistryLog("Beginning registry update");
@@ -261,10 +311,6 @@ namespace SystemChangeReporter
 
         private void UpdateRegKey(RegistryKey RootKey, ref List<string> CheckedStrs, ref List<Regex> Filters, bool SecurityCheck)
         {
-            if (Filters.Any(filt => filt.IsMatch(RootKey.Name)))
-                return;
-
-            RegistryLog(RootKey.Name);
             CheckedStrs.Add(RootKey.Name);
 
             if (!PrevRegistry.ContainsKey(RootKey.Name))
@@ -293,47 +339,42 @@ namespace SystemChangeReporter
 
             foreach (var SubKeyName in RootKey.GetSubKeyNames())
             {
+            if (Filters.Any(filt => filt.IsMatch(RootKey.Name + "\\" + SubKeyName)))
                 //var AccessRights = RootKey.GetAccessControl().GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
                 //System.Security.AccessControl.RegistryRights.ReadPermissions ??
-                //if (SecurityCheck)
-                //    try
-                //    {
-                //        var SubKey = RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, System.Security.AccessControl.RegistryRights.ReadKey);
-                //        if (SubKey == null)
-                //            RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
-                //        else
-                //            UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
-                //    }
-                //    catch (System.Security.SecurityException)
-                //    {
-                //        MessageBox.Show("Permission denied to key '" + RootKey.Name + "', automatically added temporary filter for this key and subkeys");
-                //        RegistryLog("Permission denied to key '" + RootKey.Name + "', automatically added temporary filter for this key and subkeys");
-                //        RegFilters.Add(RootKey.Name + "*");
-                //    }
-                //else
-                //{
-                var AccessRules = RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadPermissions).GetAccessControl().GetAccessRules(true, true, typeof(NTAccount));
-                bool HadPermission = false;
-                foreach (AuthorizationRule Rule in AccessRules)
+                if (SecurityCheck)
                 {
-                    if (((SecurityIdentifier)Rule.IdentityReference.Translate(typeof(SecurityIdentifier))).Equals(WindowsIdentity.GetCurrent().User))
+                    var AccessRules = RootKey.OpenSubKey(SubKeyName, RegistryKeyPermissionCheck.ReadSubTree, RegistryRights.ReadPermissions).GetAccessControl().GetAccessRules(true, true, typeof(NTAccount));
+                    bool HadPermission = false;
+                    foreach (AuthorizationRule Rule in AccessRules)
                     {
-                        var SubKey = RootKey.OpenSubKey(SubKeyName, false);
-                        if (SubKey == null)
-                            RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
-                        else
-                            UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
-                        HadPermission = true;
-                        break;
+                        if (((SecurityIdentifier)Rule.IdentityReference.Translate(typeof(SecurityIdentifier))).Equals(WindowsIdentity.GetCurrent().User))
+                        {
+                            var SubKey = RootKey.OpenSubKey(SubKeyName, false);
+                            if (SubKey == null)
+                                RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
+                            else
+                                UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
+                            HadPermission = true;
+                            break;
+                        }
+                    }
+                    if (!HadPermission)
+                    {
+                        //MessageBox.Show("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys");
+                        RegistryLog("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys", true);
+                        RegFilters.Add(RootKey.Name + "\\" + SubKeyName);
                     }
                 }
-                if (!HadPermission)
+                else
                 {
-                    //MessageBox.Show("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys");
-                    RegistryLog("Permission denied to key '" + RootKey.Name + "\\" + SubKeyName + "', automatically added temporary filter for this key and subkeys");
-                    RegFilters.Add(RootKey.Name + "\\" + SubKeyName + "*");
+
+                    var SubKey = RootKey.OpenSubKey(SubKeyName, false);
+                    if (SubKey == null)
+                        RegFilters.Add(RootKey.Name + '\\' + SubKeyName);
+                    else
+                        UpdateRegKey(SubKey, ref CheckedStrs, ref Filters, SecurityCheck);
                 }
-                //}
             }
 
             RootKey.Close();
@@ -359,13 +400,62 @@ namespace SystemChangeReporter
         {
             if (IsRunning && chkRegistryMonitor.Checked)
                 RegistryLog("Registry changed (" + Chng.ToString() + "): " + KeyPath +
-                    (ChangedValue.Equals(default(KeyValuePair<string, object>)) ? "" : " -> " + ChangedValue.Key + ":" + ChangedValue.Value));
+                    (ChangedValue.Equals(default(KeyValuePair<string, object>)) ? "" : ":" + ChangedValue.Key));
         }
 
-        private void RegistryLog(string Text)
+        private void RegistryLog(string Text, bool ForcePrint = false)
         {
-            if (IsRunning && chkRegistryMonitor.Checked)
+            if (!txtRegLog.IsDisposed && ((IsRunning && chkRegistryMonitor.Checked) || ForcePrint))
                 txtRegLog.BeginInvoke((Action)(() => txtRegLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL)));
+        }
+
+        private void ChangeFile(string FilePath, ChangeType Chng)
+        {
+            if (!treFiles.IsDisposed && IsRunning && chkDriveMonitor.Checked)
+            {
+                if (DriveFilters.Any(s => WildcardToRegex(s).IsMatch(FilePath)))
+                    return;
+
+                FileLog("File changed (" + Chng.ToString() + "): " + FilePath);
+
+                MarkOnTree(FilePath, Chng, treFiles.Nodes, '\\');
+            }
+        }
+
+        private void FileLog(string Text, bool ForcePrint = false)
+        {
+            if (!txtFileLog.IsDisposed && ((IsRunning && chkDriveMonitor.Checked) || ForcePrint))
+                txtFileLog.AppendText(DateTime.Now.ToString(TIME_FORMAT) + Text + EOL);
+        }
+
+        private void MarkOnTree(string Path, ChangeType Chng, TreeNodeCollection Tree, params char[] Delimiter)
+        {
+            var Broken = Path.Split(Delimiter);
+            if(Broken.Length < 1)
+                return;
+
+            var Base = Broken[0];
+            var BaseNode = Tree.Find(Base, false).FirstOrDefault();
+            if (BaseNode == null)
+                BaseNode = Tree.Add(Base);
+
+            if (Broken.Length < 2)
+                BaseNode.ForeColor = ChangeColors[Chng];
+            else
+                MarkOnSubTree(Broken.Skip(1).ToArray(), Chng, BaseNode);
+        }
+
+        private void MarkOnSubTree(string[] Broken, ChangeType Chng, TreeNode Node)
+        {
+            var Base = Broken[0];
+            var BaseNode = Node.Nodes.Find(Base, false).FirstOrDefault();
+            if (BaseNode == null)
+                BaseNode = Node.Nodes.Add(Base);
+
+            if (Broken.Length == 1)
+                BaseNode.ForeColor = ChangeColors[Chng];
+            else
+                MarkOnSubTree(Broken.Skip(1).ToArray(), Chng, BaseNode);
         }
 
         #endregion
